@@ -1,0 +1,17 @@
+{{('message' in globals())}}
+{{extend 'layout.html'}}
+
+{{if 'message' in globals():}}
+<h3>{{=message}}</h3>
+{{elif 'content' in globals():}}
+{{=content}}
+{{else:}}
+{{=BEAUTIFY(response._vars)}}
+{{pass}}
+
+<ul>
+{{=LI(A("ALL", _href=URL("social_counts_all")))}}
+{{for page in pages:}}
+{{=LI(A(page.name, _href=URL("social_counts_pages", args=page.pageid)),A("(Link)", _href=page.link))}}
+{{pass}}
+</ul>

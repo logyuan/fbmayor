@@ -1,0 +1,746 @@
+# -*- coding: utf-8 -*-
+from facebook import GraphAPI, GraphAPIError
+import json
+
+
+
+
+@auth.requires_login()
+def index():
+    user = auth.user
+    response.flash = T('You are %(name)s', dict(name=user['first_name']))
+    if  len(request.args) >= 2 and request.args[0] == 'id':
+        fb_id = request.args[1]
+    else:
+        fb_id = 'me'
+    
+    graph = getGraph()
+    try:
+        fb_obj = graph.get_object(fb_id, metadata=1)
+    except GraphAPIError, e:
+        response.flash = "%s [%s: %s]" % (T("Logging you out!"),__name__, e)
+        redirect(auth.url(f='user', args='logout'))
+    
+    response.menu = [[k, False, URL(r=request, f='connection', args=[fb_id,k])] for k,v in  fb_obj['metadata']['connections'].items()]
+    return dict(message=T('You are at  %(fb_id)s', dict(fb_id=fb_id)))
+
+@auth.requires_login()
+def connection():
+    user = auth.user
+    if not len(request.args) >= 2:
+        return None
+    fb_id = request.args[0]
+    fb_connection_name = request.args[1]
+    try:
+        connections = getGraph().get_connections(fb_id, fb_connection_name)
+    except GraphAPIError, e:
+        response.flash = "%s [%s: %s]" % (T("Logging you out!"),__name__, e)
+        redirect(auth.url(f='user', args='logout'))
+
+    
+    response.menu=[[v['name'], False, URL(r=request, f='index', args=['id', v['id']])]  for v in connections['data']]
+    return dict(message=T('Looking list of %(conn_name)s of %(id)s', dict(conn_name=fb_connection_name, id=fb_id)))
+
+
+
+
+@auth.requires_login()
+def loading_list():
+    user = auth.user
+    import csv, sys
+    import datetime
+    import time
+    
+    graph = getGraph()
+    reader = open('/Users/logyuan/Dropbox/FB_socialcount/keelung.csv', "U") 
+    errorMsg = ''
+    for fbplace in csv.reader(reader):      
+        try:
+            id = str(fbplace[0])
+            row = fbpl.place(placeid=id)
+            if not row: 
+                try:
+                    fb_obj = graph.get_object(str(fbplace[0]))
+                    #id= fb_obj["id"]
+                    name =  fb_obj["name"]
+                    category = fb_obj["category"]
+                    link= fb_obj["link"]
+                    #checkins= fb_obj["checkins"]
+                    zip= fb_obj["location"]["zip"]
+                    try:
+                        category_list =  fb_obj["category_list"]
+                    except:
+                        category_list = ''
+                    try:
+                        latitude= fb_obj["location"]["latitude"] 
+                        longitude= fb_obj["location"]["longitude"] if (fb_obj["location"]["longitude"]) else ""
+                    except:
+                        latitude =''
+                        longitude=''
+                    fbpl.place.insert(placeid=id,name = name,latitude=latitude,longitude=longitude,category=category,category_list=category_list,zip=zip,link=link)
+                except GraphAPIError, e:
+                    errorMsg = errorMsg + 'errorID:'  + str(fbplace[0]) + 'errorMessage: ' +  str(e) + ','    
+                fbpl.commit()
+                message='Successfully adding new place into the database'
+        
+                time.sleep(8)
+        except GraphAPIError, e:
+            errorMsg = errorMsg + 'errorID:'  + str(fbplace[0])  + ' errorMessage:'  +  str(e) + ','
+    reader.close()
+        # or "rU" 
+    
+    return dict(message=T('list complete'),errorMsg=errorMsg )
+
+
+
+@auth.requires_login()
+def collect_posts():
+    import time
+    rows = fbpl().select(fbpl.page.pageid)
+    for row in rows:
+        getPagePosts(row.pageid)
+        time.sleep(1)
+    return "All page posts Finished"
+
+@auth.requires_login()
+def getPagePosts(pageid):
+    try:
+        graph = getGraph()
+        posts_data=graph.request(pageid + '/posts')
+        data = []
+        data = posts_data["data"]
+    except GraphAPIError, e:
+        message=e.result
+        fbpl.graphAPI_Error.insert(placeid=pageid,date_time=datetime.datetime.today(),error_msg=message)
+        fbpl.commit()     
+    try:
+        for post in data:
+            fid = post["id"].split('_')[1]
+            row = fbpl.post(fid=fid)
+            if row:
+                message =  post["message"] if ('message' in post) else ''
+                from_id = post["from"]["id"] if ('from' in post) else ''
+                from_name = post["from"]["name"] if ('from' in post) else ''
+                created_time = post["created_time"] if ('created_time' in post) else ''
+                status_type = post["status_type"] if ('status_type' in post) else ''
+                ptype = post["type"] if ('type' in post) else ''
+                status_type = post["status_type"] if ('status_type' in post) else ''
+                link = post["link"] if ('link' in post) else ''
+                picture = post["picture"] if ('picture' in post) else ''
+                object_id = post["object_id"] if ('object_id' in post) else ''
+                fbpl.post.update_or_insert(fbpl.post.fid==str(fid), fid=fid, message=message,from_id=from_id, from_name=from_name, created_time=created_time,object_id=object_id,ptype=ptype,status_type=status_type, link=link, picture=picture ) 
+                fbpl.commit()
+        
+        message = "all posts finished"
+    except GraphAPIError, e:
+        message=e.result
+        fbpl.graphAPI_Error.insert(placeid=fid,date_time=datetime.datetime.today(),error_msg=message)
+        fbpl.commit() 
+    
+    
+    return dict(message=message) 
+    
+@auth.requires_login()
+def getPost(gid):
+    graph = getGraph()
+    try:
+        if gid:       
+            fb_obj = graph.get_object(gid)
+            fid= fb_obj["id"]
+            message =  fb_obj["message"] if ('message' in fb_obj) else ''
+            #shares_count = fb_obj["shares"]['count'] if ('shares' in fb_obj) else ''
+            #updated_time = fb_obj["updated_time"] if ('updated_time' in fb_obj) else ''
+            from_id = fb_obj["from"]["id"] if ('from' in fb_obj) else ''
+            from_name = fb_obj["from"]["name"] if ('from' in fb_obj) else ''
+            created_time = fb_obj["created_time"] if ('created_time' in fb_obj) else ''
+            status_type = fb_obj["status_type"] if ('status_type' in fb_obj) else ''
+            ptype = fb_obj["type"] if ('type' in fb_obj) else ''
+            status_type = fb_obj["status_type"] if ('status_type' in fb_obj) else ''
+            link = fb_obj["link"] if ('link' in fb_obj) else ''
+            picture = fb_obj["picture"] if ('picture' in fb_obj) else ''
+            #lik_obj = graph.request(gid + '/likes', args={'summary': '1'})
+            #likes_count = lik_obj["summary"]["total_count"] if ('summary' in lik_obj) else ''
+            #comt_obj = graph.request(gid + '/comments', args={'summary': '1'})
+            #comment_count = comt_obj["summary"]["total_count"] if ('summary' in comt_obj) else ''
+            object_id = fb_obj["object_id"] if ('object_id' in fb_obj) else ''
+            fbpl.post.update_or_insert(fbpl.post.fid==str(fid), message=message,from_id=from_id, from_name=from_name, created_time=created_time,object_id=object_id,ptype=ptype,status_type=status_type, link=link, picture=picture )
+            
+            fbpl.commit()
+            message='Successfully adding new page into the database'            
+        else:
+            message='failure, please check your pageid!'       
+    except GraphAPIError, e:
+        message=e.result
+        fbpl.graphAPI_Error.insert(placeid=gid,date_time=datetime.datetime.today(),error_msg=message)
+        fbpl.commit() 
+    
+    
+    return dict(message=message) 
+
+
+
+@auth.requires_login()
+def getPage(gid):
+    graph = getGraph()
+    try:
+        if gid:       
+            fb_obj = graph.request(from_id + '_' + fid ,args={'fields': 'id, name, category, about, can_post, talking_about_count, were_here_count, link,likes,description, updated_time, is_published,comments.limit(1).summary(true), message, likes.limit(1).summary(true)'})
+            id= fb_obj["id"]
+            row = fbpl.page(pageid=id)
+            if not row: 
+                pageid = fb_obj["id"]
+                name =  fb_obj["name"] if ('name' in fb_obj) else ''
+                category = fb_obj["category"] if ('category' in fb_obj) else ''
+                about = fb_obj["about"] if ('about' in fb_obj) else ''
+                can_post = fb_obj["can_post"] if ('can_post' in fb_obj) else ''
+                is_published = fb_obj["is_published"] if ('is_published' in fb_obj) else ''
+                talking_about_count = fb_obj["talking_about_count"] if ('talking_about_count' in fb_obj) else 0
+                were_here_count = fb_obj["were_here_count"] if ('were_here_count' in fb_obj) else 0
+                link = fb_obj["link"] if ('link' in fb_obj) else ''
+                likes = fb_obj["likes"] if ('likes' in fb_obj) else ''
+                description = fb_obj["description"] if ('description' in fb_obj) else ''
+                updated_time = fb_obj["updated_time"] if ('updated_time' in fb_obj) else ''
+                cover_id = fb_obj["cover"]["cover_id"] if ('cover_id' in fb_obj) else ''
+                source = fb_obj["source"] if ('source' in fb_obj) else ''
+                locale = fb_obj["locale"] if ('locale' in fb_obj) else ''
+                website = fb_obj["website"] if ('website' in fb_obj) else ''
+                fbpl.page.insert(pageid=pageid, name=name, category=category, about=about, can_post=can_post, is_published=is_published, link=link, description=description,  updated_time=updated_time, cover_id=cover_id, source=source,locale=locale,website=website)
+            fbpl.commit()
+            message='Successfully adding new page into the database'
+        else:
+            message='failure, please check your pageid!'       
+    except GraphAPIError, e:
+        message=e.result
+        fbpl.graphAPI_Error.insert(placeid=pid,date_time=datetime.datetime.today(),error_msg=message)
+        fbpl.commit() 
+    
+    
+    return dict(message=message) 
+
+@auth.requires_login()
+def getPage_f():
+    if request.vars['gid']:
+        gid = request.vars['gid']
+    else:
+        message='failure, please check your pageid!'
+        return dict(message=message)
+    graph = getGraph()
+    try:
+        if gid:       
+            fb_obj = graph.get_object(gid)
+            id= fb_obj["id"]
+            row = fbpl.page(pageid=id)
+            if not row: 
+                pageid = fb_obj["id"]
+                name =  fb_obj["name"] if ('name' in fb_obj) else ''
+                category = fb_obj["category"] if ('category' in fb_obj) else ''
+                about = fb_obj["about"] if ('about' in fb_obj) else ''
+                can_post = fb_obj["can_post"] if ('can_post' in fb_obj) else ''
+                is_published = fb_obj["is_published"] if ('is_published' in fb_obj) else ''
+                talking_about_count = fb_obj["talking_about_count"] if ('talking_about_count' in fb_obj) else ''
+                were_here_count = fb_obj["were_here_count"] if ('were_here_count' in fb_obj) else ''
+                link = fb_obj["link"] if ('link' in fb_obj) else ''
+                likes = fb_obj["likes"] if ('likes' in fb_obj) else ''
+                description = fb_obj["description"] if ('description' in fb_obj) else ''
+                updated_time = fb_obj["updated_time"] if ('updated_time' in fb_obj) else ''
+                cover_id = fb_obj["cover_id"] if ('cover_id' in fb_obj) else ''
+                source = fb_obj["source"] if ('source' in fb_obj) else ''
+                locale = fb_obj["locale"] if ('locale' in fb_obj) else ''
+                website = fb_obj["website"] if ('website' in fb_obj) else ''
+                fbpl.page.insert(pageid=pageid, name=name, category=category, about=about, can_post=can_post, is_published=is_published, talking_about_count=talking_about_count, were_here_count=were_here_count, link=link, likes=likes, description=description,  updated_time=updated_time, cover_id=cover_id, source=source,locale=locale,website=website)
+            
+            fbpl.commit()
+            message='Successfully adding new page into the database'            
+        else:
+            message='failure, please check your pageid!'       
+    except GraphAPIError, e:
+        message=e.result
+        fbpl.graphAPI_Error.insert(placeid=pid,date_time=datetime.datetime.today(),error_msg=message)
+        fbpl.commit() 
+    
+    
+    return dict(message=message) 
+
+
+@auth.requires_login()
+def getPageSocialCount(gid):
+    import datetime
+    import time
+    graph = getGraph()
+    try:
+        if gid:
+            oid = gid
+        else:
+            message='failure, please check your placeid!'
+            return dict(message=message)
+        pid = checkGraphId(oid)
+        if pid <> '0':
+            if pid <> oid :
+                record2 = fbpl(fbpl.page.pageid==pid).select().first() 
+                if not (record2) :
+                   getPage(pid)
+                   time.sleep(1)
+                   fbpl(fbpl.page.pageid==oid).delete()
+            fb_obj = graph.get_object(pid)
+            checkins =  fb_obj["checkins"] if  ('checkins' in fb_obj) else ''
+            likes= fb_obj["likes"] if  ('likes' in fb_obj) else ''
+            were_here_count= fb_obj["were_here_count"] if  ('were_here_count' in fb_obj) else ''
+            talking_about_count	 = fb_obj["talking_about_count"] if  ('talking_about_count' in fb_obj) else ''
+            updated_time = fb_obj["updated_time"] if  ('updated_time' in fb_obj) else ''
+            date_time = datetime.datetime.today()
+            fbpl.social_counts.insert(placeid=pid,checkins = checkins,likes=likes,date_time=date_time,were_here_count=were_here_count,updated_time=updated_time,talking_about_count=talking_about_count)
+            fbpl.commit()
+            time.sleep(1.1)
+            message='Successfully update the PageSocialCount'
+            return dict(message=message)
+        else:
+            return dict(message='failure, please check your placeid!')    
+
+    except GraphAPIError, e:
+        message=e.result
+        fbpl.graphAPI_Error.insert(placeid=pid,date_time=datetime.datetime.today(),error_msg=message)
+        fbpl.commit() 
+    
+    #response.menu = [[k, False, URL(r=request, f='connection', args=[fb_id,k])] for k,v in  fb_obj['metadata']['connections'].items()]
+    return dict(message=message)  #dict(message=str[9])
+
+@auth.requires_login()
+def getPageSocialCount_f():
+    import datetime
+    import time
+    graph = getGraph()
+    try:
+        if request.vars['gid']:
+            pid = request.vars['gid']
+        else:
+            message='failure, please check your placeid!'
+            return dict(message=message)
+        if pid <> '0':
+            fb_obj = graph.get_object(pid)
+            checkins =  fb_obj["checkins"] if  ('checkins' in fb_obj) else ''
+            likes= fb_obj["likes"] if  ('likes' in fb_obj) else ''
+            were_here_count= fb_obj["were_here_count"] if  ('were_here_count' in fb_obj) else ''
+            talking_about_count	 = fb_obj["talking_about_count"] if  ('talking_about_count' in fb_obj) else ''
+            updated_time = fb_obj["updated_time"] if  ('updated_time' in fb_obj) else ''
+            date_time = datetime.datetime.today()
+            fbpl.social_counts.insert(placeid=pid,checkins = checkins,likes=likes,date_time=date_time,were_here_count=were_here_count,updated_time=updated_time,talking_about_count=talking_about_count)
+            fbpl.commit()
+            time.sleep(1.1)
+            message='Successfully update the PageSocialCount'
+            return dict(fb_obj=fb_obj)
+        else:
+            return dict(message='failure, please check your placeid!')    
+
+    except GraphAPIError, e:
+        message=e.result
+        fbpl.graphAPI_Error.insert(placeid=pid,date_time=datetime.datetime.today(),error_msg=message)
+        fbpl.commit()
+        
+    
+    #response.menu = [[k, False, URL(r=request, f='connection', args=[fb_id,k])] for k,v in  fb_obj['metadata']['connections'].items()]
+    return dict(talking_about_count=talking_about_count)  #dict(message=str[9])
+
+
+@auth.requires_login()
+def getPostSocialCount(from_id,fid):
+    import datetime
+    import time
+    graph = getGraph()
+    try:
+        if fid:
+            fb_obj = graph.request(from_id + '_' + fid ,args={'fields': 'id, shares, comments.limit(1).summary(true), message, likes.limit(1).summary(true)'})
+            
+            shares_count = int(fb_obj["shares"]["count"]) if ('shares' in fb_obj) else 0
+            updated_time = fb_obj["updated_time"] if ('updated_time' in fb_obj) else ''
+            likes_count = int(fb_obj["likes"]["summary"]["total_count"]) if ('likes' in fb_obj) else 0
+            comment_count = int(fb_obj["comments"]["summary"]["total_count"]) if ('comments' in fb_obj) else 0
+            date_time = datetime.datetime.today()
+            row = fbpl.post(fid=fid)
+            if row : 
+                likes_sincelastupdate = int(likes_count)-int(row.likes_count) if likes_count else 0
+                shares_sincelastupdate = int(shares_count)-int(row.shares_count) if shares_count else 0
+                comment_sincelastupdate = int(comment_count)-int(row.comment_count) if comment_count else 0
+            else:
+                likes_sincelastupdate = 0
+                shares_sincelastupdate=0
+                comment_sincelastupdate=0
+            fbpl.post_counts.insert(fid=fid, updated_time=updated_time, shares_count=shares_count, date_time=date_time, likes_count=likes_count, comment_count=comment_count)
+            fbpl.post.update_or_insert(fbpl.post.fid==str(fid), updated_time=updated_time, shares_count=shares_count, likes_count=likes_count, comment_count=comment_count,likes_sincelastupdate=likes_sincelastupdate,shares_sincelastupdate=shares_sincelastupdate,comment_sincelastupdate=comment_sincelastupdate)
+            fbpl.commit() 
+            time.sleep(1)
+            message='Successfully update the PostSocialCount'
+            return dict(message=message)
+        else:
+            return dict(message='failure, please check your placeid!')    
+
+    except GraphAPIError, e:
+        message=e.result
+        fbpl.graphAPI_Error.insert(placeid=fid,date_time=datetime.datetime.today(),error_msg=message)
+        fbpl.commit() 
+    
+    #response.menu = [[k, False, URL(r=request, f='connection', args=[fb_id,k])] for k,v in  fb_obj['metadata']['connections'].items()]
+    return dict(message=message)  #dict(message=str[9])
+
+
+
+@auth.requires_login()
+def getPlace(gid):
+    graph = getGraph()
+    try:
+        if gid:       
+            fb_obj = graph.get_object(gid)
+            id= fb_obj["id"]
+            row = fbpl.place(placeid=id)
+            if not row: 
+                name =  fb_obj["name"]
+                category = fb_obj["category"]
+                category_list =  fb_obj["category_list"]              
+                checkins= fb_obj["checkins"]      
+                zip= fb_obj["location"]["zip"]
+                latitude= fb_obj["location"]["latitude"]
+                longitude= fb_obj["location"]["longitude"]
+                link= fb_obj["link"]
+                old_ids = ''
+                fbpl.place.insert(placeid=id,name = name,latitude=latitude,longitude=longitude,category=category,category_list=category_list,zip=zip,link=link,old_ids=old_ids)
+            
+            fbpl.commit()
+            message='Successfully adding new place into the database'            
+        else:
+            message='failure, please check your placeid!'       
+    except GraphAPIError, e:
+        message=e.result
+        fbpl.graphAPI_Error.insert(placeid=pid,date_time=datetime.datetime.today(),error_msg=message)
+        fbpl.commit() 
+    
+    
+    return dict(message=message) 
+
+
+@auth.requires_login()
+def getPlace_f():
+    graph = getGraph()
+    try:
+        if request.vars['gid']:
+            gid = request.vars['gid']       
+            fb_obj = graph.get_object(gid)
+            id= fb_obj["id"]
+            row = fbpl.place(placeid=id)
+            if not row: 
+                name =  fb_obj["name"]
+                category = fb_obj["category"]
+                category_list =  fb_obj["category_list"]              
+                checkins= fb_obj["checkins"]      
+                zip= fb_obj["location"]["zip"]
+                latitude= fb_obj["location"]["latitude"]
+                longitude= fb_obj["location"]["longitude"]
+                link= fb_obj["link"]
+                old_ids = ''
+                fbpl.place.insert(placeid=id,name = name,latitude=latitude,longitude=longitude,category=category,category_list=category_list,zip=zip,link=link,old_ids=old_ids)
+            
+            fbpl.commit()
+            message='Successfully adding new place into the database'            
+        else:
+            message='failure, please check your placeid!'       
+    except GraphAPIError, e:
+        message=e.result
+        fbpl.graphAPI_Error.insert(placeid=pid,date_time=datetime.datetime.today(),error_msg=message)
+        fbpl.commit() 
+    
+    
+    return dict(message=message)
+
+@auth.requires_login()
+def getEvent(eid):
+    graph = getGraph()
+    try:
+        event= graph.get_object(eid)
+        eventid = event["id"] if 'id' in event else ''
+        row = fbpl.event(eventid=eventid)
+        if not row:
+            description = event["description"] if 'description' in event else ''
+            end_time  = event["end_time"] if 'end_time' in event else ''
+            timezone = event["timezone"] if 'timezone' in event else ''
+            name = event["name"] if 'name' in event else ''
+            location = event["location"] if 'location' in event else ''
+            ownerid = event["owner"]["id"] if 'owner' in event else ''
+            picture = event["picture"] if 'picture' in event else ''
+            privacy = event["privacy"] if 'privacy' in event else ''
+            start_time = event["start_time"] if 'start_time' in event else ''
+            ticket_uri = event["ticket_uri"] if 'ticket_uri' in event else ''
+            updated_time = event["updated_time"] if 'updated_time' in event else ''
+            is_date_only  = event["is_date_only"] if 'is_date_only' in event else ''
+            if 'venue' in event:
+                venueid  = event["venue"]["id"] if 'id' in event["venue"] else ''
+                venuename = event["venue"]["name"] if 'name' in event["venue"] else ''
+                country = event["venue"]["country"] if 'country' in event["venue"] else ''
+                city = event["venue"]["city"] if 'city' in event["venue"] else ''
+                state  = event["venue"]["state"] if 'state' in event["venue"] else ''
+                street = event["venue"]["street"] if 'street' in event["venue"] else ''
+                zipcode = event["venue"]["zip"] if 'zip' in event["venue"] else ''
+                longitude = event["venue"]["longitude"] if 'longitude' in event["venue"] else ''
+                latitude  = event["venue"]["latitude"] if 'latitude' in event["venue"] else ''
+            fbpl.event.insert(eventid=eventid, description=description, end_time=end_time, timezone=timezone, name=name, location=location, ownerid=ownerid, picture=picture, privacy=privacy, start_time=start_time, ticket_uri=ticket_uri, updated_time=updated_time, is_date_only=is_date_only, venuename=venuename, venueid=venueid, country=country, city=city, state=state, street=street, zipcode=zipcode, longitude=longitude, latitude=latitude)
+            fbpl.commit()
+            message='Successfully adding new event into the database'            
+        else:
+            message='failure, please check your eventid!'       
+    except GraphAPIError, e:
+        message=e.result
+        fbpl.graphAPI_Error.insert(placeid=eventid,date_time=datetime.datetime.today(),error_msg=message)
+        fbpl.commit() 
+    return dict(message=message)
+
+@auth.requires_login()
+def getSocialCount():
+    import datetime
+    import time
+    graph = getGraph()
+    try:
+        if request.vars['gid']:
+            oid = request.vars['gid']
+        else:
+            message='failure, please check your placeid!'
+            return dict(message=message)    
+        pid = checkGraphId(oid)
+        if pid <> '0':
+            if pid <> oid :
+                record = fbpl(fbpl.place.placeid==oid).select().first()
+                record2 = fbpl(fbpl.place.placeid==pid).select().first() 
+                if not (record2) :
+                   getPlace(pid)
+                   time.sleep(1)
+                   record2 = fbpl(fbpl.place.placeid==pid).select().first() 
+                   oids = []
+                   oids.append(oid)
+                   record2.update_record(old_ids=oids)
+                   fbpl(fbpl.place.placeid==oid).delete()
+                else:
+                   fbpl(fbpl.place.placeid==oid).delete()
+                   oids = []
+                   oids.append(record2.old_ids)
+                   oids.append(oid)
+                   record2.update_record(old_ids=oids)
+            fb_obj = graph.get_object(pid)
+            try:
+                checkins =  fb_obj["checkins"]
+            except:
+                checkins=''
+            try:
+                likes= fb_obj["likes"]
+            except:
+                likes=''
+            try:
+                were_here_count= fb_obj["were_here_count"]
+            except:
+                were_here_count=''
+            date_time = datetime.datetime.today()
+            fbpl.social_counts.insert(placeid=pid,checkins = checkins,likes=likes,date_time=date_time,were_here_count=were_here_count)
+            fbpl.commit()
+            time.sleep(1.1)
+            message='Successfully found the place'
+            return dict(message=message)
+        else:
+            return dict(message='failure, please check your placeid!')    
+
+    except GraphAPIError, e:
+        message=e.result
+        fbpl.graphAPI_Error.insert(placeid=pid,date_time=datetime.datetime.today(),error_msg=message)
+        fbpl.commit() 
+    
+    #response.menu = [[k, False, URL(r=request, f='connection', args=[fb_id,k])] for k,v in  fb_obj['metadata']['connections'].items()]
+    return dict(message=message)  #dict(message=str[9])
+
+@auth.requires_login()
+def getSocialCount_f(gid):
+    import datetime
+    import time
+    graph = getGraph()
+    try:
+        if gid:
+            oid = gid
+        else:
+            message='failure, please check your placeid!'
+            return dict(message=message)    
+        pid = checkGraphId(oid)
+        if pid <> '0':
+            if pid <> oid :
+                record = fbpl(fbpl.place.placeid==oid).select().first()
+                record2 = fbpl(fbpl.place.placeid==pid).select().first() 
+                if not (record2) :
+                    getPlace(pid)
+                    time.sleep(1)
+                    record2 = fbpl(fbpl.place.placeid==pid).select().first() 
+                    oids = []
+                    oids.append(oid)
+                    record2.update_record(old_ids=oids)
+                    fbpl(fbpl.place.placeid==oid).delete()
+                else:
+                   fbpl(fbpl.place.placeid==oid).delete()
+                   oids = []
+                   oids.append(record2.old_ids)
+                   oids.append(oid)
+                   record2.update_record(old_ids=oids)
+            fb_obj = graph.get_object(pid)    
+            try:
+                checkins =  fb_obj["checkins"]
+            except:
+                checkins=''
+            try:
+                likes= fb_obj["likes"]
+            except:
+                likes=''
+            try:
+                were_here_count= fb_obj["were_here_count"]
+            except:
+                were_here_count=''
+            date_time = datetime.datetime.today()
+            fbpl.social_counts.insert(placeid = pid, checkins = checkins,likes=likes,date_time=date_time,were_here_count=were_here_count)
+            fbpl.commit()
+            time.sleep(1.1)
+            message='Successfully found the place'
+            return dict(message=message)
+        else:
+            return dict(message='failure, please check your placeid!')    
+
+    except GraphAPIError, e:
+        message=e.result
+        fbpl.graphAPI_Error.insert(placeid=pid,date_time=datetime.datetime.today(),error_msg=message)
+        fbpl.commit()
+    except:
+        raise
+    
+    #response.menu = [[k, False, URL(r=request, f='connection', args=[fb_id,k])] for k,v in  fb_obj['metadata']['connections'].items()]
+    return dict(message=message)  #dict(message=str[9])
+
+
+
+
+
+@auth.requires_login()
+def checkGraphId_f():
+    import datetime
+    import time
+    graph = getGraph()
+    if request.vars['gid']:
+        graphid = request.vars['gid']
+    else:
+        return dict(message='failure, please check your placeid!')    
+    
+    new_graphid = graphid
+    try: 
+        fb_obj = graph.get_object(graphid)             
+    except GraphAPIError, r:
+        message=r.result
+        code =message['error']['code']
+        fbpl.graphAPI_Error.insert(placeid=graphid,date_time=datetime.datetime.today(),code =code,error_msg=message)
+        fbpl.commit() 
+        if code == 21:
+            id=message['error']['message'].split(' ')
+            new_graphid = id[9].strip('.')
+            try:
+                fb_obj = graph.get_object(new_graphid)
+            except GraphAPIError, e:
+                time.sleep(1)
+                new_graphid = checkGraphId(new_graphid)
+            try:
+                row = fbpl.place(placeid=graphid)
+                fbpl.merged_place.insert(placeid=graphid,date_time=datetime.datetime.today(),merge_to = new_graphid,name = row.name, latitude=row.latitude,longitude=row.longitude,category=row.category,category_list=row.category_list,zip=row.zip,link=row.link,old_ids=row.old_ids)
+            except:
+                message = 'No this id in the DB'
+        else:
+            new_graphid = '0'          
+            
+    return new_graphid
+
+
+
+
+@auth.requires_login()
+def checkGraphId(graphid):
+    import datetime
+    import time
+    graph = getGraph()
+    new_graphid = graphid
+    try: 
+        fb_obj = graph.get_object(graphid)             
+    except GraphAPIError, r:
+        message=r.result
+        code =message['error']['code']
+        fbpl.graphAPI_Error.insert(placeid=graphid,date_time=datetime.datetime.today(),code =code,error_msg=message)
+        fbpl.commit() 
+        if code == 21:
+            id=message['error']['message'].split(' ')
+            new_graphid = id[9].strip('.')
+            try:
+                fb_obj = graph.get_object(new_graphid)
+            except GraphAPIError, e:
+                time.sleep(1)
+                new_graphid = checkGraphId(new_graphid)
+            try:
+                row = fbpl.place(placeid=graphid)
+                fbpl.merged_place.insert(placeid=graphid,date_time=datetime.datetime.today(),merge_to = new_graphid,name = row.name, latitude=row.latitude,longitude=row.longitude,category=row.category,category_list=row.category_list,zip=row.zip,link=row.link,old_ids=row.old_ids)
+            except:
+                message = 'No this id in the DB'
+        else:
+            new_graphid = '0'          
+            
+    return new_graphid
+
+
+@auth.requires_login()
+def countAllPlaceSocialCount():
+    import datetime
+    import time
+    
+    graph = getGraph()
+    rows = fbpl().select(fbpl.place.placeid,fbpl.place.old_ids, orderby=fbpl.place.id)
+    start_date_time=datetime.datetime.today()
+    
+    for row in rows:
+        pid= row.placeid
+        #check if the Facebook has the graphic
+        getSocialCount_f(pid)
+
+    end_date_time=datetime.datetime.today()    
+    fbpl.update_log.insert(start_date_time=start_date_time,end_date_time=end_date_time)
+    message = 'Successfully update socialcount of places'
+    return dict(message=message)
+
+@auth.requires_login()
+def countAllPageSocialCount():
+    import datetime
+    import time
+    
+    graph = getGraph()
+    rows = fbpl().select(fbpl.page.pageid, orderby=fbpl.page.id)
+    start_date_time=datetime.datetime.today()
+    
+    for row in rows:
+        gid= row.pageid
+        #check if the Facebook has the graphic
+        getPageSocialCount(gid)
+
+    end_date_time=datetime.datetime.today()    
+    fbpl.update_log.insert(start_date_time=start_date_time,end_date_time=end_date_time)
+    message = 'Successfully update socialcount of pages'
+    return dict(message=message)
+
+
+@auth.requires_login()
+def countAllPostSocialCount():
+    import datetime
+    import time
+    
+    rows = fbpl().select(fbpl.post.fid,fbpl.post.from_id, orderby=fbpl.post.id)
+    start_date_time=datetime.datetime.today()
+    
+    for row in rows:
+        gid= row.fid
+        from_id = row.from_id
+        #check if the Facebook has the graphic
+        getPostSocialCount(from_id,gid)
+
+    end_date_time=datetime.datetime.today()    
+    fbpl.update_log.insert(start_date_time=start_date_time,end_date_time=end_date_time)
+    message = 'Successfully update socialcount of posts'
+    return dict(message=message)

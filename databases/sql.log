@@ -1,0 +1,1093 @@
+timestamp: 2014-04-07T01:04:00.730457
+CREATE TABLE auth_user(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    first_name CHAR(128),
+    last_name CHAR(128),
+    username CHAR(128) UNIQUE,
+    password CHAR(256),
+    registration_key CHAR(128),
+    registration_id CHAR(512)
+);
+success!
+timestamp: 2014-04-07T01:04:00.748588
+CREATE TABLE auth_group(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role CHAR(512),
+    description TEXT
+);
+success!
+timestamp: 2014-04-07T01:04:00.764016
+CREATE TABLE auth_membership(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
+    group_id INTEGER REFERENCES auth_group (id) ON DELETE CASCADE
+);
+success!
+timestamp: 2014-04-07T01:04:00.786393
+CREATE TABLE auth_permission(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER REFERENCES auth_group (id) ON DELETE CASCADE,
+    name CHAR(512),
+    table_name CHAR(512),
+    record_id INTEGER
+);
+success!
+timestamp: 2014-04-07T01:04:00.807821
+CREATE TABLE auth_event(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    time_stamp TIMESTAMP,
+    client_ip CHAR(512),
+    user_id INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
+    origin CHAR(512),
+    description TEXT
+);
+success!
+timestamp: 2014-04-07T01:04:00.825900
+CREATE TABLE auth_cas(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
+    created_on TIMESTAMP,
+    service CHAR(512),
+    ticket CHAR(512),
+    renew CHAR(1)
+);
+success!
+timestamp: 2014-04-07T01:04:00.886170
+CREATE TABLE people(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid CHAR(512),
+    name CHAR(512),
+    gender CHAR(512),
+    hometown CHAR(512),
+    loc_id CHAR(512),
+    loc_name CHAR(512),
+    updated_time CHAR(512),
+    locale CHAR(512)
+);
+success!
+timestamp: 2014-04-07T01:04:00.922712
+CREATE TABLE post(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fid CHAR(512),
+    message CHAR(512),
+    from_id CHAR(512),
+    from_name CHAR(512),
+    created_time CHAR(512),
+    object_id CHAR(512),
+    ptype CHAR(512),
+    status_type CHAR(512),
+    link CHAR(512),
+    picture CHAR(512),
+    shares_count INTEGER,
+    updated_time CHAR(512),
+    likes_count INTEGER,
+    comment_count INTEGER
+);
+success!
+timestamp: 2014-04-07T01:04:00.948487
+CREATE TABLE post_counts(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fid CHAR(512),
+    date_time TIMESTAMP,
+    shares_count INTEGER,
+    updated_time CHAR(512),
+    likes_count INTEGER,
+    comment_count INTEGER
+);
+success!
+timestamp: 2014-04-07T01:04:00.976256
+CREATE TABLE page(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    about CHAR(512),
+    can_post CHAR(512),
+    category CHAR(512),
+    is_published CHAR(512),
+    pageid CHAR(512),
+    name CHAR(512),
+    link CHAR(512),
+    description CHAR(512),
+    updated_time CHAR(512),
+    cover_id CHAR(512),
+    source CHAR(512),
+    locale CHAR(512),
+    website CHAR(512)
+);
+success!
+timestamp: 2014-04-07T01:04:00.999465
+CREATE TABLE place(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    placeid CHAR(512) UNIQUE,
+    name CHAR(512),
+    latitude DOUBLE,
+    longitude DOUBLE,
+    category CHAR(512),
+    category_list TEXT,
+    zip CHAR(512),
+    link CHAR(512),
+    old_ids CHAR(512)
+);
+success!
+timestamp: 2014-04-07T01:04:01.023628
+CREATE TABLE social_counts(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    placeid INTEGER REFERENCES place (id) ON DELETE CASCADE,
+    date_time TIMESTAMP,
+    checkins INTEGER,
+    likes INTEGER,
+    were_here_count INTEGER,
+    talking_about_count INTEGER,
+    updated_time CHAR(512)
+);
+success!
+timestamp: 2014-04-07T01:04:01.041594
+CREATE TABLE graphAPI_Error(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    placeid INTEGER REFERENCES place (id) ON DELETE CASCADE,
+    date_time TIMESTAMP,
+    code CHAR(512),
+    error_msg CHAR(512)
+);
+success!
+timestamp: 2014-04-07T01:04:01.068212
+CREATE TABLE merged_place(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    placeid INTEGER REFERENCES place (id) ON DELETE CASCADE,
+    date_time TIMESTAMP,
+    merge_to CHAR(512),
+    name CHAR(512),
+    latitude CHAR(512),
+    longitude CHAR(512),
+    category CHAR(512),
+    category_list TEXT,
+    zip CHAR(512),
+    link CHAR(512),
+    old_ids CHAR(512)
+);
+success!
+timestamp: 2014-04-07T01:04:01.080999
+CREATE TABLE update_log(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    start_date_time TIMESTAMP,
+    end_date_time TIMESTAMP
+);
+success!
+timestamp: 2014-04-07T01:04:01.122547
+CREATE TABLE event(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    eventid CHAR(512) UNIQUE,
+    description CHAR(512),
+    end_time CHAR(512),
+    timezone CHAR(512),
+    location CHAR(512),
+    name CHAR(512),
+    ownerid CHAR(512),
+    ownername CHAR(512),
+    picture CHAR(512),
+    privacy CHAR(512),
+    start_time CHAR(512),
+    ticket_uri CHAR(512),
+    updated_time CHAR(512),
+    venuename CHAR(512),
+    venueid CHAR(512),
+    country CHAR(512),
+    city CHAR(512),
+    state CHAR(512),
+    street CHAR(512),
+    zipcode CHAR(512),
+    longitude CHAR(512),
+    latitude CHAR(512),
+    is_date_only CHAR(512)
+);
+success!
+timestamp: 2014-04-07T01:04:01.151910
+CREATE TABLE event_counts(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    eventid CHAR(512),
+    date_time TIMESTAMP,
+    invited_count INTEGER,
+    attending_count INTEGER,
+    maybe_count INTEGER,
+    declined_count INTEGER,
+    noreply_count INTEGER,
+    updated_time CHAR(512)
+);
+success!
+timestamp: 2014-04-07T11:05:52.940051
+ALTER TABLE post ADD shares_sincelastupdate INTEGER;
+timestamp: 2014-04-07T11:05:52.946533
+ALTER TABLE post ADD likes_sincelastupdate INTEGER;
+timestamp: 2014-04-07T11:05:52.952377
+ALTER TABLE post ADD comment_sincelastupdate INTEGER;
+success!
+success!
+success!
+success!
+timestamp: 2014-04-08T09:06:32.762265
+ALTER TABLE page ADD likes_sincelastupdate INTEGER;
+timestamp: 2014-04-08T09:06:32.769984
+ALTER TABLE page ADD likes INTEGER;
+timestamp: 2014-04-08T09:06:32.773602
+ALTER TABLE page ADD talking_about_count INTEGER;
+timestamp: 2014-04-08T09:06:32.776477
+ALTER TABLE page ADD walking_about_sincelastupdate INTEGER;
+timestamp: 2014-04-08T09:06:32.778747
+ALTER TABLE page ADD checkins INTEGER;
+timestamp: 2014-04-08T09:06:32.780321
+ALTER TABLE page ADD were_here_sincelastupdate INTEGER;
+timestamp: 2014-04-08T09:06:32.782829
+ALTER TABLE page ADD checkins_sincelastupdate INTEGER;
+timestamp: 2014-04-08T09:06:32.784828
+ALTER TABLE page ADD were_here_count INTEGER;
+success!
+timestamp: 2014-04-08T09:38:26.904666
+ALTER TABLE page ADD talking_about_sincelastupdate INTEGER;
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+timestamp: 2014-04-08T23:09:25.647444
+ALTER TABLE page ADD cover_source CHAR(512);
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+timestamp: 2014-04-10T00:46:53.324134
+ALTER TABLE page ADD picture CHAR(512);
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+timestamp: 2014-04-10T19:24:32.489045
+ALTER TABLE place ADD city CHAR(512);
+timestamp: 2014-04-10T19:24:32.499363
+ALTER TABLE place ADD street CHAR(512);
+timestamp: 2014-04-10T19:24:32.501694
+ALTER TABLE place ADD country CHAR(512);
+timestamp: 2014-04-10T19:24:32.505983
+ALTER TABLE place ADD website CHAR(512);
+timestamp: 2014-04-10T19:24:32.509069
+ALTER TABLE place ADD phone CHAR(512);
+timestamp: 2014-04-10T19:24:32.511132
+ALTER TABLE place ADD state CHAR(512);
+timestamp: 2014-04-10T19:24:32.512789
+ALTER TABLE place ADD mutiple CHAR(512);
+timestamp: 2014-04-10T19:24:32.517490
+ALTER TABLE place ADD description CHAR(512);
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+timestamp: 2014-04-18T17:22:28.945889
+CREATE TABLE campaign_group(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fid CHAR(512) UNIQUE,
+    name CHAR(512),
+    group CHAR(512)
+);
+timestamp: 2014-04-18T17:24:03.089194
+CREATE TABLE campaign_group(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fid CHAR(512) UNIQUE,
+    name CHAR(512),
+    group CHAR(512)
+);
+timestamp: 2014-04-18T17:25:48.546491
+CREATE TABLE campaign_group(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fid CHAR(512) UNIQUE,
+    name CHAR(512),
+    group CHAR(512)
+);
+timestamp: 2014-04-18T17:26:23.253826
+CREATE TABLE campaign_team(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fid CHAR(512) UNIQUE,
+    name CHAR(512),
+    team CHAR(512)
+);
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+timestamp: 2014-04-18T20:53:19.355346
+ALTER TABLE post ADD team CHAR(512);
+success!
+timestamp: 2014-04-18T20:53:19.412912
+ALTER TABLE page ADD team CHAR(512);
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
+success!
