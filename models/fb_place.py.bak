@@ -1,23 +1,23 @@
 # coding: utf8
 #fbpl = DAL("sqlite://storage.sqlite", adapter_args=dict(foreign_keys=False))
-fbpl = DAL("mongodb://localhost/fbmayor", adapter_args=dict(foreign_keys=False), db_codec='utf8')
+fbpl = DAL("mongodb://localhost/fbmayor", adapter_args=dict(foreign_keys=False), db_codec='utf8',pool_size=10)
 fbpl.define_table('people',Field('uid',unique=True),Field('name'),Field('gender'),Field('hometown'),Field('loc_id'),Field('loc_name'),Field('updated_time'),Field('locale'))
 
 
-fbpl.define_table('post', Field('fid',unique=True), Field('message'), Field('from_id'), Field('from_name'), Field('created_time'), Field('object_id'), Field('ptype'), Field('status_type'), Field('link'), Field('picture'), Field('shares_count','integer',default=0), Field('updated_time'), Field('likes_count','integer',default=0), Field('comment_count','integer', default=0), Field('likes_sincelastupdate','integer',default=0),  Field('shares_sincelastupdate','integer',default=0), Field('comment_sincelastupdate','integer',default=0), Field('team'), Field('placeid'), Field('placename'),Field('fscore','double',default=0),Field('tscore','double',default=0))
+fbpl.define_table('post', Field('fid',unique=True), Field('message'), Field('from_id'), Field('from_name'), Field('created_time', 'datetime'),Field('object_id'), Field('ptype'), Field('status_type'), Field('link'), Field('picture'),  Field('fbupdated_time','datetime'),  Field('updated_time','datetime'), Field('shares_count','integer',default=0), Field('likes_count','integer',default=0), Field('comment_count','integer', default=0), Field('shares_count48','integer',default=0), Field('likes_count48','integer',default=0), Field('comment_count48','integer', default=0), Field('likes_sincelastupdate','integer',default=0),  Field('shares_sincelastupdate','integer',default=0), Field('comment_sincelastupdate','integer',default=0), Field('team'), Field('placeid'), Field('placename'),Field('fscore','double',default=0),Field('tscore','double',default=0))
 
-fbpl.define_table('post_counts', Field('fid'), Field('date_time', 'datetime'), Field('shares_count','integer'), Field('updated_time'), Field('likes_count','integer'), Field('comment_count','integer'))
+fbpl.define_table('post_counts', Field('fid'), Field('date_time', 'datetime'), Field('shares_count','integer'), Field('updated_time', 'datetime'), Field('likes_count','integer'), Field('comment_count','integer'))
 
 
-fbpl.define_table('page',Field('about'),Field('can_post'),Field('category'),Field('is_published'),Field('pageid',unique=True),Field('name'),Field('link'),Field('description'),Field('updated_time'),Field('cover_id'),Field('cover_source'),Field('source'),Field('locale'),Field('website'),Field('checkins','integer',default=0),Field('likes','integer',default=0),Field('were_here_count','integer',default=0),Field('talking_about_count','integer',default=0) , Field('likes_sincelastupdate','integer',default=0),  Field('checkins_sincelastupdate','integer',default=0),  Field('were_here_sincelastupdate','integer',default=0), Field('talking_about_sincelastupdate','integer',default=0),  Field('picture'), Field('team'))
+fbpl.define_table('page',Field('about'),Field('can_post'),Field('category'),Field('is_published'),Field('pageid',unique=True),Field('name'),Field('link'),Field('description'),Field('updated_time'),Field('cover_id'),Field('cover_source'),Field('source'),Field('locale'),Field('website'),Field('checkins','integer',default=0),Field('likes','integer',default=0),Field('were_here_count','integer',default=0),Field('talking_about_count','integer',default=0) ,Field('checkins24','integer',default=0),Field('likes24','integer',default=0),Field('were_here_count24','integer',default=0),Field('talking_about_count24','integer',default=0) ,Field('likes_sincelastupdate','integer',default=0),  Field('checkins_sincelastupdate','integer',default=0),  Field('were_here_sincelastupdate','integer',default=0), Field('talking_about_sincelastupdate','integer',default=0),  Field('picture'), Field('team') )
 
 fbpl.page.pageid.requires=IS_NOT_EMPTY()
 fbpl.page.team.requires=IS_IN_SET(('連勝文','柯文哲','丁守中','顧立雄','All'))
 
-fbpl.define_table('team_counts', Field('team'),Field('date_time', 'datetime'), Field('checkins','integer'),Field('likes','integer'),Field('were_here_count','integer'),Field('talking_about_count','integer'), Field('total_active_posts','integer'), Field('total_post_likes','integer'), Field('total_post_comments','integer'), Field('total_post_shares','integer'), 
+fbpl.define_table('team_counts', Field('team'),Field('date_time', 'datetime'), Field('checkins','integer'),Field('likes','integer'),Field('were_here_count','integer'),Field('talking_about_count','integer'),Field('checkins24','integer'),Field('likes24','integer'),Field('were_here_count24','integer'),Field('talking_about_count24','integer'), Field('total_active_posts','integer'), Field('total_post_likes','integer'), Field('total_post_comments','integer'), Field('total_post_shares','integer'),
 Field('hour48_active_posts','integer'), Field('hour48_post_likes','integer'), Field('hour48_post_comments','integer'), Field('hour48_post_shares','integer'), Field('hour48_active_stories','integer'), Field('hour48_story_likes','integer'), Field('hour48_story_comments','integer'), Field('hour48_story_shares','integer'), Field('hour48_active_links','integer'), Field('hour48_link_likes','integer'), Field('hour48_link_comments','integer'), Field('hour48_link_shares','integer'), Field('hour48_active_videos','integer'), Field('hour48_video_likes','integer'), Field('hour48_video_comments','integer'), Field('hour48_video_shares','integer'))
 
-
+fbpl.define_table('dailySum', Field('date', 'datetime'), Field('dailyPagelikes','integer'), Field('talkingAbout','integer'), Field('dailyPosts','integer'),Field('dailyPostLikes','integer'), Field('dailyPostComments','integer'), Field('dailyPostShares','integer'), Field('team'))
 
 fbpl.team_counts.team.requires=IS_IN_SET(('連勝文','柯文哲','丁守中','顧立雄','All'))
 
@@ -36,7 +36,7 @@ fbpl.place.category.requires=IS_NOT_EMPTY()
 #fbpl.place.old_ids.requires=IS_IN_DB(fbpl, fbpl.social_counts.placeid)
 fbpl.place.link.requires=IS_URL()
 
-fbpl.define_table('social_counts', Field('placeid',fbpl.place),Field('date_time', 'datetime'), Field('checkins','integer'),Field('likes','integer'),Field('were_here_count','integer'),Field('talking_about_count','integer'), Field('updated_time') )
+fbpl.define_table('social_counts', Field('placeid',fbpl.place),Field('date_time', 'datetime'), Field('checkins','integer'),Field('likes','integer'),Field('were_here_count','integer'),Field('talking_about_count','integer'), Field('updated_time', 'datetime') )
 
 fbpl.social_counts.placeid.requires=IS_NOT_EMPTY()
 fbpl.social_counts.placeid.requires=IS_IN_DB(fbpl, fbpl.place.placeid)

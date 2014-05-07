@@ -6,6 +6,12 @@ import datetime
 from dateutil import parser, tz
 import calendar
 
+
+
+
+
+
+
 def index(): return dict(message="hello from ws.py")
 
 
@@ -13,53 +19,90 @@ def timeseries():
     candidates = ["連勝文","柯文哲"]
     timeseries={}
     result=OrderedDict()
-    date=[]
+    date1=[]
 
     rows = fbpl(fbpl.team_counts.team == "連勝文").select(fbpl.team_counts.ALL, orderby=fbpl.team_counts.date_time)
     for row in rows:
-        date.append(row.date_time.strftime('%Y/%m/%d'))
-    result.update({"date":date})
+        listdate = row.date_time
+        date1.append(listdate.strftime('%Y/%m/%d'))
+    result.update({"date":date1})
     result.update({"candidates":candidates})
     r1=[]
     r2=[]
     r3=[]
     r4=[]
     r5=[]
+    r6=[]
     for row in rows:
         likes = []
+        talkingAbout=[]
         totalPosts=[]
         totalPostLikes=[]
         totalPostComments=[]
         totalPostShares=[]
 
         date = row.date_time
-        #rows1 = fbpl((fbpl.team_counts.team == "連勝文") & (fbpl.team_counts.date_time==date)).select(fbpl.team_counts.ALL, orderby=fbpl.team_counts.date_time).first()
+        date1 = date - datetime.timedelta(days=1)
+        date2 = date + datetime.timedelta(days=1)
+        date3 = date - datetime.timedelta(hours=8)
+        date4 = date2 - datetime.timedelta(hours=8)
+        
+        
 
-        likes.append(row.likes)
-        totalPosts.append(row.total_active_posts)
-        totalPostLikes.append(row.total_post_likes)
-        totalPostComments.append(row.total_post_comments)
-        totalPostShares.append(row.total_post_shares)
+        
+        
+        row1 = fbpl((fbpl.team_counts.team == "連勝文") & (fbpl.team_counts.date_time>=date1)).select(fbpl.team_counts.ALL).first()
+        
+        talkingAbout.append(row.talking_about_count)
+        
+        Posts = fbpl((fbpl.post.team == "連勝文") & (fbpl.post.created_time >= date3) & (fbpl.post.created_time < date4) ).select()
+        posts_today=len(Posts)
+        totalPosts.append(posts_today)
+        
+        if row1:
+            likes.append(row.likes-row1.likes)
+            totalPostLikes.append(row.total_post_likes-row1.total_post_likes)
+            totalPostComments.append(row.total_post_comments-row1.total_post_comments)
+            totalPostShares.append(row.total_post_shares-row1.total_post_shares)
+        else:
+            likes.append(0)
+            totalPostLikes.append(0)
+            totalPostComments.append(0)
+            totalPostShares.append(0)
 
-        row2 = fbpl((fbpl.team_counts.team == "柯文哲") & (fbpl.team_counts.date_time==date) ).select(fbpl.team_counts.ALL, orderby=fbpl.team_counts.date_time).first()
+        row2 = fbpl((fbpl.team_counts.team == "柯文哲") & (fbpl.team_counts.date_time>=date) ).select(fbpl.team_counts.ALL).first()
 
-        likes.append(row2.likes)
-        totalPosts.append(row2.total_active_posts)
-        totalPostLikes.append(row2.total_post_likes)
-        totalPostComments.append(row2.total_post_comments)
-        totalPostShares.append(row2.total_post_shares)
+        row3 = fbpl((fbpl.team_counts.team == "柯文哲") & (fbpl.team_counts.date_time>=date1) ).select(fbpl.team_counts.ALL).first()
+        
+        talkingAbout.append(row2.talking_about_count)
+        Posts = fbpl((fbpl.post.team == "柯文哲") &  (fbpl.post.created_time >= date3) & (fbpl.post.created_time < date4) ).select()
+        posts_today=len(Posts)
+        totalPosts.append(posts_today)
+        
+        if row3:
+            likes.append(row2.likes-row3.likes)
+            totalPostLikes.append(row2.total_post_likes-row3.total_post_likes)
+            totalPostComments.append(row2.total_post_comments-row3.total_post_comments)
+            totalPostShares.append(row2.total_post_shares-row3.total_post_shares)
 
+        else:
+            likes.append(0)
+            totalPostLikes.append(0)
+            totalPostComments.append(0)
+            totalPostShares.append(0)
         r1.append(likes)
-        r2.append(totalPosts)
-        r3.append(totalPostLikes)
-        r4.append(totalPostComments)
-        r5.append(totalPostShares)
+        r2.append(talkingAbout)
+        r3.append(totalPosts)
+        r4.append(totalPostLikes)
+        r5.append(totalPostComments)
+        r6.append(totalPostShares)
 
     result.update({"likes":r1})
-    result.update({"totalPosts":r2})
-    result.update({"totalPostLikes":r3})
-    result.update({"totalPostComments":r4})
-    result.update({"totalPostShares":r5})
+    result.update({"talkingAbout":r2})
+    result.update({"totalPosts":r3})
+    result.update({"totalPostLikes":r4})
+    result.update({"totalPostComments":r5})
+    result.update({"totalPostShares":r6})
 
 
 
@@ -121,24 +164,24 @@ def exportElectionPath():
 
         picture=''
         url_facebook=''
+        
+
+        
         Pages = fbpl(fbpl.page.team == candidate).select(orderby=fbpl.page.likes)
         for page in Pages:
+            ts=OrderedDict()
             likes += page.likes
             talking_about_count+= page.talking_about_count
-            likes_sincelastupdate += page.likes_sincelastupdate
-            talking_about_sincelastupdate += page.talking_about_sincelastupdate
-        picture = page.picture
-        url_facebook = page.link
+            likes_sincelastupdate += page.likes24
+            talking_about_sincelastupdate += page.talking_about_count24
 
-
-
-
+        FPage = fbpl(fbpl.page.team == candidate).select(orderby=fbpl.page.likes).last()
 
         ts=OrderedDict()
         ts.update({"name": candidate})
         ts.update({"backgroundColor": colors[candidate]})
-        ts.update({"image": picture})
-        updateTime = str(page.updated_time)
+        ts.update({"image": FPage.picture})
+        updateTime = str(FPage.updated_time)
         ts.update({"updatedTime": utc_time(updateTime)})
         ts.update({"likes": likes})
         #ts.update({"were_here_count": were_here_count})
@@ -146,12 +189,38 @@ def exportElectionPath():
         ts.update({"likes_sincelastupdate": likes_sincelastupdate})
         #ts.update({"were_here_sincelastupdate": were_here_sincelastupdate})
         ts.update({"talking_about_sincelastupdate": talking_about_sincelastupdate})
-
-
-
-
-        ts.update({"url_facebook": url_facebook})
         result.update(ts)
+        
+        
+        
+        
+        ts=OrderedDict()
+        ts.update({"name": FPage.name})
+        ts.update({"url": FPage.link})
+        since = '2014-03-19' if candidate == '連勝文' else '2011-10-20'
+        ts.update({"since": since})
+        ts.update({"likes": FPage.likes})
+        ts.update({"talking_about_count": FPage.talking_about_count})
+        ts.update({"likes_sincelastupdate":FPage.likes24})
+        ts.update({"talking_about_sincelastupdate": FPage.talking_about_count24})
+        
+        result.update({'officialPage':ts})
+        
+        fanPages=[]
+        for page in Pages.exclude(lambda page: page.pageid<>FPage.pageid):
+            ts=OrderedDict()
+            ts.update({"name": page.name})
+            ts.update({"url": page.link})
+            ts.update({"since": '2014'})
+            ts.update({"likes": page.likes})
+            ts.update({"talking_about_count": page.talking_about_count})
+            ts.update({"likes_sincelastupdate":page.likes24})
+            ts.update({"talking_about_sincelastupdate": page.talking_about_count24})
+            fanPages.append(ts)
+            
+        result.update({'fanPages':fanPages})
+
+
 
 #--------------------------------------------------------------------------------------------------------------#
 
@@ -198,6 +267,8 @@ def exportElectionPath():
             ts=OrderedDict()
             ts.update({"rank": i})
             ts.update({"score": Post['tscore']})
+            ts.update({"tscore": Post['tscore']})
+            ts.update({"fscore": Post['fscore']})
             ts.update({"message": Post['message']})
             ts.update({"from_id": Post['from_id']})
             from_picture=fbpl(fbpl.page.pageid==Post['from_id']).select(fbpl.page.picture).first()["picture"]
@@ -210,9 +281,9 @@ def exportElectionPath():
             ts.update({"shares_count": Post['shares_count']})
             ts.update({"comment_count": Post['comment_count']})
             ts.update({"likes_count": Post['likes_count']})
-            ts.update({"shares_sincelastupdate": Post['shares_sincelastupdate']})
-            ts.update({"comment_sincelastupdate": Post['comment_sincelastupdate']})
-            ts.update({"likes_sincelastupdate": Post['likes_sincelastupdate']})
+            ts.update({"shares_sincelastupdate": Post['shares_count48']})
+            ts.update({"comment_sincelastupdate": Post['comment_count48']})
+            ts.update({"likes_sincelastupdate": Post['likes_count48']})
             ts.update({"link": Post['link']})
             ts.update({"picture": Post['picture']})
             #picture = getOpengraphImage(story['link'])
@@ -240,6 +311,8 @@ def exportElectionPath():
             ts=OrderedDict()
             ts.update({"rank": i})
             ts.update({"score": story['fscore']})
+            ts.update({"tscore": story['tscore']})
+            ts.update({"fscore": story['fscore']})
             ts.update({"message": story['message']})
             ts.update({"from_id": story['from_id']})
             from_picture=fbpl(fbpl.page.pageid==story['from_id']).select(fbpl.page.picture).first()["picture"]
@@ -252,9 +325,9 @@ def exportElectionPath():
             ts.update({"shares_count": story['shares_count']})
             ts.update({"comment_count": story['comment_count']})
             ts.update({"likes_count": story['likes_count']})
-            ts.update({"shares_sincelastupdate": story['shares_sincelastupdate']})
-            ts.update({"comment_sincelastupdate": story['comment_sincelastupdate']})
-            ts.update({"likes_sincelastupdate": story['likes_sincelastupdate']})
+            ts.update({"shares_sincelastupdate": story['shares_count48']})
+            ts.update({"comment_sincelastupdate": story['comment_count48']})
+            ts.update({"likes_sincelastupdate": story['likes_count48']})
             ts.update({"link": story['link']})
             ts.update({"picture": story['picture']})
             i=i+1
@@ -279,6 +352,8 @@ def exportElectionPath():
             ts=OrderedDict()
             ts.update({"rank": i})
             ts.update({"score": link['fscore']})
+            ts.update({"tscore": link['tscore']})
+            ts.update({"fscore": link['fscore']})
             ts.update({"message": link['message']})
             ts.update({"from_id": link['from_id']})
             from_picture=fbpl(fbpl.page.pageid==story['from_id']).select(fbpl.page.picture).first()["picture"]
@@ -291,9 +366,9 @@ def exportElectionPath():
             ts.update({"shares_count": link['shares_count']})
             ts.update({"comment_count": link['comment_count']})
             ts.update({"likes_count": link['likes_count']})
-            ts.update({"shares_sincelastupdate": link['shares_sincelastupdate']})
-            ts.update({"comment_sincelastupdate": link['comment_sincelastupdate']})
-            ts.update({"likes_sincelastupdate": link['likes_sincelastupdate']})
+            ts.update({"shares_sincelastupdate": link['shares_count48']})
+            ts.update({"comment_sincelastupdate": link['comment_count48']})
+            ts.update({"likes_sincelastupdate": link['likes_count48']})
             ts.update({"link": link['link']})
             ts.update({"picture": link['picture']})
             #picture = getOpengraphImage(link['link'])
@@ -324,6 +399,8 @@ def exportElectionPath():
             ts=OrderedDict()
             ts.update({"rank": i})
             ts.update({"score": video['fscore']})
+            ts.update({"tscore": video['tscore']})
+            ts.update({"fscore": video['fscore']})
             ts.update({"message": video['message']})
             ts.update({"from_id": video['from_id']})
             from_picture=fbpl(fbpl.page.pageid==story['from_id']).select(fbpl.page.picture).first()["picture"]
@@ -336,9 +413,9 @@ def exportElectionPath():
             ts.update({"shares_count": video['shares_count']})
             ts.update({"comment_count": video['comment_count']})
             ts.update({"likes_count": video['likes_count']})
-            ts.update({"shares_sincelastupdate": video['shares_sincelastupdate']})
-            ts.update({"comment_sincelastupdate": video['comment_sincelastupdate']})
-            ts.update({"likes_sincelastupdate": video['likes_sincelastupdate']})
+            ts.update({"shares_sincelastupdate": video['shares_count48']})
+            ts.update({"comment_sincelastupdate": video['comment_count48']})
+            ts.update({"likes_sincelastupdate": video['likes_count48']})
             ts.update({"link": video['link']})
             ts.update({"picture": video['picture']})
             #picture = getOpengraphImage(link['link'])
@@ -376,8 +453,8 @@ def exportElectionPath():
 
         result.update({'RecentlyVisited':RecentlyVisited})
         results.update({candidate:result})
-        #file=open('/Users/logyuan/Documents/git/ElectionPath/db/taipeimayor.JSON','w')
-        file=open('Z:\\pathgeo\\github\\ElectionPath\\db\\taipeimayor.JSON','w')
+        file=open('/Users/logyuan/Documents/git/ElectionPath/db/taipeimayor.JSON','w')
+        #file=open('Z:\\pathgeo\\github\\ElectionPath\\db\\taipeimayor.JSON','w')
         file.write(json.dumps(results, indent=4 , ensure_ascii=False, separators=(',', ': ')))
         file.close()
         test = timeseries()
