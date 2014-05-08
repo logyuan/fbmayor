@@ -161,6 +161,9 @@ def getPageSocialCount(gid):
             updated_time = datetime.datetime.strptime(updated_time,'%Y-%m-%dT%H:%M:%S+0000')
             date_time = datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S')
             date_time = datetime.datetime.strptime(date_time,'%Y-%m-%d %H:%M:%S')
+            cover_id = fb_obj["cover"]["cover_id"] if ('cover' in fb_obj) else ''
+            source = fb_obj["cover"]["source"] if ('cover' in fb_obj) else ''
+            picture = fb_obj["picture"]["data"]["url"] if ('picture' in fb_obj) else ''
             row = fbpl.page(pageid=pid)
             checkins24= 0
             likes24 = 0
@@ -191,13 +194,13 @@ def getPageSocialCount(gid):
                 #    checkins_sincelastupdate = int(checkins)-int(row.checkins) if checkins else 0
                 #    talking_about_sincelastupdate = int(talking_about_count)-int(row.talking_about_count) if talking_about_count else 0
                 #    were_here_sincelastupdate = int(were_here_count)-int(row.were_here_count) if were_here_count else 0
-                row.update_record(checkins = checkins, likes=likes, date_time=date_time, were_here_count=were_here_count, updated_time=updated_time, talking_about_count=talking_about_count, likes_sincelastupdate=likes_sincelastupdate, talking_about_sincelastupdate=talking_about_sincelastupdate, checkins_sincelastupdate=checkins_sincelastupdate, were_here_sincelastupdate=were_here_sincelastupdate , checkins24=checkins24, likes24=likes24, were_here_count24=were_here_count24, talking_about_count24=talking_about_count24 )
+                row.update_record(checkins = checkins, likes=likes, date_time=date_time, were_here_count=were_here_count, updated_time=updated_time, talking_about_count=talking_about_count, likes_sincelastupdate=likes_sincelastupdate, talking_about_sincelastupdate=talking_about_sincelastupdate, checkins_sincelastupdate=checkins_sincelastupdate, were_here_sincelastupdate=were_here_sincelastupdate , checkins24=checkins24, likes24=likes24, were_here_count24=were_here_count24, talking_about_count24=talking_about_count24, cover_id=cover_id, source=source, picture=picture )
             else:
                 likes_sincelastupdate =  0
                 checkins_sincelastupdate =  0
                 talking_about_sincelastupdate = 0
                 were_here_sincelastupdate = 0
-                fbpl.page.insert(pageid=pid, checkins = checkins, likes=likes, date_time=date_time, were_here_count=were_here_count, updated_time=updated_time, talking_about_count=talking_about_count, likes_sincelastupdate=likes_sincelastupdate, talking_about_sincelastupdate=talking_about_sincelastupdate, checkins_sincelastupdate=checkins_sincelastupdate, were_here_sincelastupdate=were_here_sincelastupdate)
+                fbpl.page.insert(pageid=pid, checkins = checkins, likes=likes, date_time=date_time, were_here_count=were_here_count, updated_time=updated_time, talking_about_count=talking_about_count, likes_sincelastupdate=likes_sincelastupdate, talking_about_sincelastupdate=talking_about_sincelastupdate, checkins_sincelastupdate=checkins_sincelastupdate, were_here_sincelastupdate=were_here_sincelastupdate, cover_id=cover_id, source=source, picture=picture )
                 fbpl.commit()
                 fbpl.social_counts.insert(placeid=pid,checkins = checkins,likes=likes,date_time=date_time,were_here_count=were_here_count,updated_time=updated_time,talking_about_count=talking_about_count)
                 fbpl.commit()
@@ -291,7 +294,7 @@ def getPagePosts(pageid):
                 #else:
                 #    picture = post["picture"] if ('picture' in post) else ''
 
-                #row.update_record(fbupdated_time=fbupdated_times)
+                #row.update_record(fbupdated_time=fbupdated_time)
             else:
                 message =  post["message"] if ('message' in post) else ''
                 from_id = post["from"]["id"] if ('from' in post) else ''

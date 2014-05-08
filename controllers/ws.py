@@ -346,7 +346,7 @@ def exportElectionPath():
 #--------------------------------------------------------------------------------------------------------------#
 
         HotLink=[]
-        Links = fbpl((fbpl.post.team == candidate)  & (fbpl.post.ptype == 'link') & (fbpl.post.fscore > 0.0 ) ).select( orderby =~fbpl.post.fscore, groupby = fbpl.post.object_id ,limitby=(0,10))
+        Links = fbpl((fbpl.post.team == candidate) & (fbpl.post.ptype == 'link') & (fbpl.post.fscore > 0.0 ) ).select( orderby =~fbpl.post.fscore, groupby = fbpl.post.object_id ,limitby=(0,10))
         i=1
         for link in Links:
             ts=OrderedDict()
