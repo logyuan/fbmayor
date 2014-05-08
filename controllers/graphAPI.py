@@ -291,7 +291,7 @@ def getPagePosts(pageid):
                 #else:
                 #    picture = post["picture"] if ('picture' in post) else ''
 
-                row.update_record(fbupdated_time=fbupdated_times)
+                #row.update_record(fbupdated_time=fbupdated_time)
             else:
                 message =  post["message"] if ('message' in post) else ''
                 from_id = post["from"]["id"] if ('from' in post) else ''
